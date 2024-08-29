@@ -1,10 +1,12 @@
 (ns altcha-clj.encoding 
   (:require
    [clojure.string :as str]
-   #?(:cljs [goog.Uri.QueryData :as query-data])
+   #?(:clj [cheshire.core :as json]
+      )
    ) 
   (:import
-   #?(:clj [java.net URLEncoder URLDecoder])))
+   #?(:clj [java.net URLEncoder URLDecoder])
+   [java.util Base64]))
 
 #?(:clj
 (defn encode-params 
@@ -43,3 +45,20 @@
               [(keyword (decode-url-component k))
                (decode-url-component v)])))
     {}))
+
+(defn decode-base64 
+  "Cross platform helper function for decoding base64"
+  [payload]
+  #?(:clj (String. (.decode (Base64/getDecoder) payload))
+     :cljs (js/btoa payload)
+     )
+  )
+
+(defn json->clj 
+  "Converts a JSON string to a corresponding Clojure object.
+  ClojureScript implementation uses the native JSON.parse
+  JVM version uses Cheshire."
+  [json-str]
+  #?(:clj (json/parse-string json-str)
+    :cljs (js->clj (js/JSON.parse json-str) :keywordize-keys true)
+  ))
