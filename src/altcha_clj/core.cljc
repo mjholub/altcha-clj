@@ -5,9 +5,9 @@
             )
             #?(:cljs (:import [goog.crypt Sha256 Hmac])))
 
-(def default-max-number 1e6)
-(def default-salt-len 12)
-(def default-alg "SHA-256") ;; or SHA-1/SHA-512
+(def ^:const default-max-number 1e6)
+(def ^:const default-salt-len 12)
+(def ^:const default-alg "SHA-256") ;; or SHA-1/SHA-512
 
 (defn- get-hmac-name
   "Helper function to convert JS algorithm name to one known
