@@ -34,7 +34,9 @@
        arr)))
 
 #?(:clj
-   (defn ab2hex [byte-array]
+   (defn ab2hex
+    "Converts a byte array to a hexadecimal string"
+     [byte-array]
      (apply str (map #(format "%02x" %) byte-array)))
    :cljs
    (defn ab2hex [array-buffer]
@@ -48,12 +50,17 @@
      (js/Math.floor (* (js/Math.random) max))))
 
 #?(:clj
-   (defn hash-hex [algorithm data]
+   (defn hash-hex 
+     "Generates a hexadecimal string representation of the challenge
+     message digest created using the selected algorithm"
+     [algorithm data]
      (let [md (java.security.MessageDigest/getInstance algorithm)
            hash-bytes (.digest md (.getBytes data "UTF-8"))]
        (ab2hex hash-bytes)))
    :cljs
-   (defn hash-hex [algorithm data]
+   (defn hash-hex
+    "Generates a hexadecimal string representation of the SHA-256 digest of the challenge message"
+     [_ data]
      (let [sha256 (Sha256.)
            data-bytes (crypt/stringToUtf8ByteArray data)]
        (.update sha256 data-bytes)
@@ -76,14 +83,18 @@
 (defn create-challenge 
   "Creates a challenge for the client to solve.
   options is a map of the following keys: 
-  - :algorithm - algorithm for creating a digest of the challenge, default is SHA-256
-  - :max-number - highest random number used for generating the challenge. Default is 1e6
-  - :salt-len - length of the salt. Default is 12
-  - :expires - optional, recommended expiration time of the challenge validity in seconds
-  - :hmac-key - required, the secret key for creating the HMAC signature
-  - :salt - optional, custom salt to use instead of generating one
-  - :number - optional, custom number to use instead of generating one
-  - :params - optional, additional parameters to include in the salt
+  - `:algorithm` - algorithm for creating a digest of the challenge, default is **SHA-256**.
+     For ClojureScript, it will always be SHA-256.
+     Can also be **SHA-1** or **SHA-512**
+  - `:max-number` - highest random number used for generating the challenge. Default is 1e6
+  - `:salt-len` - length of the salt. Default is 12
+  - `:expires` - optional, recommended. Expiration time of the challenge validity in seconds.
+  - `:hmac-key` - required, the secret key for creating the HMAC signature (a string value, not a path)
+  - `:params` - optional, additional parameters to include in the salt
+
+  Changing the following parameters to hardcoded values is not recommended outside development settings
+  - `:salt` - optional, custom salt to use instead of generating one
+  - `:number` - optional, custom number to use instead of generating one
   "
   [options]
   (let [algorithm (:algorithm options default-alg)
