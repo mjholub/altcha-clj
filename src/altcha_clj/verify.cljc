@@ -1,8 +1,9 @@
 (ns altcha-clj.verify 
   (:require
+   [altcha-clj.core :refer [create-challenge hash-hex hmac-hex]]
    [altcha-clj.encoding :as encoding]
-   [altcha-clj.core :refer [create-challenge]]
-   ))
+   [altcha-clj.polyfill :refer [now]]
+   [clojure.string :as str]))
 
 (defn- is-not-past? [expire-time]
   #?(:clj
@@ -52,3 +53,41 @@
     (encoding/json->clj)
     (check-solution hmac-key check-expiration?)  
   ))
+
+(defn- signature-not-expired? [verification-data now]
+  (or (nil? (:expires verification-data))
+                        (> (:expires verification-data) now))
+  )
+
+(defn verify-server-signature [{:keys [algorithm verification-data signature verified?]} hmac-key]
+  (let [expected-signature (hmac-hex algorithm 
+                                     (hash-hex algorithm verification-data) 
+                                     hmac-key)
+        verification-data (encoding/extract-params verification-data)
+        now (now)
+        ]
+    {:verified (and verified?
+                    (:verified verification-data)
+                    (signature-not-expired? verification-data now) 
+                    (= signature expected-signature))
+     :verification-data (update-in verification-data [:verified] #(parse-boolean %))
+     }
+    )
+  )
+
+(defn verify-server-signature-base64 [base64-payload hmac-key]
+  (-> base64-payload
+      (encoding/decode-base64)
+      (encoding/json->clj)
+      (verify-server-signature hmac-key)
+      ) 
+  )
+
+(defn verify-fields-hash 
+  "Verify the hashes of field values in the input map.
+  Useful for scraper protection"
+  [form-data fields fields-hash algorithm]
+  (let [joined-data (str/join "\n" (map #(get form-data % "") fields))
+        computed-hash (hash-hex algorithm (str/trim joined-data))]
+    (= computed-hash fields-hash)))
+  
