@@ -67,7 +67,10 @@
        (ab2hex (.digest sha256)))))
 
 #?(:clj
-   (defn hmac-hex [algorithm data key]
+   (defn hmac-hex
+    "Returns the HMAC-encoded value of the data. Params
+    - `algorithm` - 'SHA-256', 'SHA-512' or 'SHA-1'"
+     [algorithm data key]
      (let [secret-key (javax.crypto.spec.SecretKeySpec. 
                         (.getBytes key "UTF-8")
                         algorithm)

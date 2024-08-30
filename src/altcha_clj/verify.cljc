@@ -59,14 +59,14 @@
                         (> (:expires verification-data) now))
   )
 
-(defn verify-server-signature [{:keys [algorithm verification-data signature verified?]} hmac-key]
+(defn verify-server-signature [{:keys [algorithm verification-data signature verified]} hmac-key]
   (let [expected-signature (hmac-hex algorithm 
                                      (hash-hex algorithm verification-data) 
                                      hmac-key)
         verification-data (encoding/extract-params verification-data)
         now (now)
         ]
-    {:verified (and verified?
+    {:verified (and verified
                     (:verified verification-data)
                     (signature-not-expired? verification-data now) 
                     (= signature expected-signature))
