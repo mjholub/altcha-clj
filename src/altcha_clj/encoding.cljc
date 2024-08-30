@@ -38,13 +38,11 @@
 (defn extract-params 
   "Extracts the URL-encoded parameters map from the salt"
   [salt]
-  (if-let [[_ params] (str/split salt #"\?" 2)]
-    (into {} 
-          (for [param (str/split params #"&")]
-            (let [[k v] (str/split param #"=")]
-              [(keyword (decode-url-component k))
-               (decode-url-component v)])))
-    {}))
+  (into {}
+        (map 
+          (fn [[k v]] [(keyword k) v])
+            (map #(str/split % #"=") (str/split salt #"\&"))))
+    )
 
 (defn decode-base64 
   "Cross platform helper function for decoding base64"

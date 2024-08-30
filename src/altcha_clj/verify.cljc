@@ -63,6 +63,7 @@
   (let [expected-signature (hmac-hex algorithm 
                                      (hash-hex algorithm verification-data) 
                                      hmac-key)
+        ;; FIXME: Cannot invoke "java.lang.CharSequence.length()" because "this.text" is null
         verification-data (encoding/extract-params verification-data)
         now (now)
         ]

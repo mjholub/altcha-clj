@@ -21,12 +21,11 @@
                                             :time (str test-time)   
                                             })
           signature (hmac-hex "SHA-256" verification-data mock-hmac-key)
-          payload (merge {:algorithm "SHA-256"
+          payload {:algorithm "SHA-256"
                                      :verified true
+                                     :signature signature
+                                     :verification-data verification-data
                                      } 
-                                         signature
-                                        verification-data
-                                         )
           result (v/verify-server-signature payload mock-hmac-key)
           ]
       (t/is (true? (:verified result)))
