@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## Unreleased
+### Fixed 
+- Added missing test hook for `calculate-expiration-offset`
+
 ## 1.1.0 - 2024-09-01
 ### Fixed 
 - Generation of expire time value
