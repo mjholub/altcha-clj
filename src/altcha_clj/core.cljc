@@ -1,9 +1,11 @@
 (ns altcha-clj.core
   (:refer-clojure :exclude [empty?])
-  (:require [clojure.string :as str]
-            #?(:cljs [goog.crypt :as crypt])
-            )
-            #?(:cljs (:import [goog.crypt Sha256 Hmac])))
+  (:require
+   #?(:cljs [goog.crypt :as crypt])
+   [altcha-clj.polyfill :refer [now]]
+   [clojure.string :as str])
+            #?(:cljs (:import
+                      [goog.crypt Hmac Sha256])))
 
 (def ^:private ^:const default-max-number 1e6)
 (def ^:private ^:const default-salt-len 12)
@@ -85,6 +87,14 @@
            data-bytes (crypt/stringToUtf8ByteArray data)]
        (ab2hex (.getHmac hmac data-bytes)))))
 
+(defn calculate-expiration-offset
+ "Adds `offset-secs` * 1000 to the `start-ts-ms` timestamp value"
+  [start-ts-ms offset-secs from-now?]
+  (if from-now?
+    (+ (* 1000 offset-secs) (now))
+    (+ (* 1000 offset-secs) start-ts-ms))
+  )
+
 (defn create-challenge 
   "Creates a challenge for the client to solve.
   options is a map of the following keys: 
@@ -94,6 +104,12 @@
   - `:max-number` - highest random number used for generating the challenge. Default is 1e6
   - `:salt-len` - length of the salt. Default is 12
   - `:expires` - optional, recommended. Expiration time of the challenge validity in seconds.
+  The value for this parameter is the **offset from current time**, **not** a precalculated value
+  of an UNIX timestamp. This function will, however, assign a timestamp value 
+  to this key in the resulting map, as a result of calculating  
+  `(+ (* 1000 e) (current-time-ms))`  
+  by calling `calculate-expiration-offset`
+  `current-time-ms` is platform-specfic pseudocode placeholder here
   - `:hmac-key` - required, the secret key for creating the HMAC signature (a string value, not a path)
   - `:params` - optional, additional parameters to include in the salt
 
@@ -108,8 +124,7 @@
         params (when-let [p (:params options)]
                  (str/join "&" (map (fn [[k v]] (str (name k) "=" v)) p)))
         expires (when-let [e (:expires options)]
-                  (str "expires=" #?(:clj (quot (.getTime e) 1000)
-                                     :cljs (js/Math.floor (/ (.getTime e) 1000)))))
+          (str "expires=" (calculate-expiration-offset 0 e true)))
         salt-params (str/join "&" (remove str/blank? [params expires]))
         salt (if-let [s (:salt options)]
                (if (str/blank? salt-params) s (str s "?" salt-params))
