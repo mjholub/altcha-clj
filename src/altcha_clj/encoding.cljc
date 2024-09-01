@@ -3,10 +3,11 @@
    [clojure.string :as str]
    #?(:clj [cheshire.core :as json]
       )
-   ) 
-  (:import
-   #?(:clj [java.net URLEncoder URLDecoder])
-   [java.util Base64]))
+   )  
+   #?(:clj
+     (:import
+      [java.net URLEncoder URLDecoder]
+   [java.util Base64])))
 
 #?(:clj
 (defn encode-params 
