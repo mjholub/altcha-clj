@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 1.0.2 - 2024-09-01
+### Changed
+- Made some functions and constants private
+
 ## 1.0.1 - 2024-09-01
 ### Fixed 
 - `java.util.Base64` import not wrapped in feature constraint properly

@@ -5,10 +5,12 @@
             )
             #?(:cljs (:import [goog.crypt Sha256 Hmac])))
 
-(def ^:const default-max-number 1e6)
-(def ^:const default-salt-len 12)
-(def ^:const default-alg "SHA-256") ;; or SHA-1/SHA-512
+(def ^:private ^:const default-max-number 1e6)
+(def ^:private ^:const default-salt-len 12)
+(def ^:private ^:const default-alg "SHA-256") ;; or SHA-1/SHA-512
 
+;; false negative, used in hmac-hex
+#_{:clj-kondo/ignore [:unused-private-var]} 
 (defn- get-hmac-name
   "Helper function to convert JS algorithm name to one known
   to javax.crypto.Mac/getInstance"
@@ -34,12 +36,12 @@
        arr)))
 
 #?(:clj
-   (defn ab2hex
+   (defn- ab2hex
     "Converts a byte array to a hexadecimal string"
      [byte-array]
      (apply str (map #(format "%02x" %) byte-array)))
    :cljs
-   (defn ab2hex [array-buffer]
+   (defn- ab2hex [array-buffer]
      (crypt/byteArrayToHex array-buffer)))
 
 #?(:clj
