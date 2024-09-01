@@ -39,7 +39,7 @@
                                                   :hmac-key hmac-key
                                                   :number number
                                                   :salt salt})]
-        (and (= (:challenge expected-challenge) challenge)
+        (and (= expected-challenge challenge)
              (= (:signature expected-challenge) signature)))))
   )
 
