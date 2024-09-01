@@ -97,6 +97,7 @@
 
 #?(:clj
    (defn test-ns-hook []
+     (test-calculate-expiration-offset)
      (create-challenge-test))
    :cljs
    (defn ^:export run-tests []
