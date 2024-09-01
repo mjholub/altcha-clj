@@ -3,7 +3,7 @@
    #?(:clj [clojure.test :as t]
                :cljs [cljs.test :as t])
    [altcha-clj.core :refer [create-challenge hash-hex hmac-hex]]
-   [altcha-clj.encoding :refer [encode-base64 encode-params]]
+   [altcha-clj.encoding :refer [clj->json encode-base64 encode-params]]
    [altcha-clj.polyfill :refer [now]]
    [altcha-clj.verify :as v]))
 
@@ -52,7 +52,8 @@
                                    :number 42
                                    :salt "LoremIpsum"
                                    :signature (:signature challenge)}
-         payload-base64 (encode-base64 verification-payload-raw)
+         payload-json (clj->json verification-payload-raw)
+         payload-base64 (encode-base64 payload-json)
                     ]
      (t/is (true? (v/check-solution-base64 payload-base64 mock-hmac-key false)))
      
