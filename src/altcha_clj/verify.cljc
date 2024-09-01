@@ -2,7 +2,7 @@
   (:require
    [altcha-clj.core :refer [create-challenge hash-hex hmac-hex]]
    [altcha-clj.encoding :as encoding]
-   [altcha-clj.polyfill :refer [now]]
+   [altcha-clj.polyfill :refer [now parse-int]]
    [clojure.string :as str]))
 
 (defn- is-not-past? [expire-time]
@@ -35,7 +35,7 @@
       ]
    (when (or (not check-expiration?)
               (is-not-past? expire-time))
-      (let [expected-challenge (create-challenge {:algorithm (keyword algorithm)
+      (let [expected-challenge (create-challenge {:algorithm algorithm
                                                   :hmac-key hmac-key
                                                   :number number
                                                   :salt salt})]
@@ -54,24 +54,25 @@
     (check-solution hmac-key check-expiration?)  
   ))
 
-(defn- signature-not-expired? [verification-data now]
+(defn signature-not-expired? [verification-data current]
   (or (nil? (:expires verification-data))
-                        (> (:expires verification-data) now))
+                        (> (parse-int (:expires verification-data)) current))
   )
 
-(defn verify-server-signature [{:keys [algorithm verification-data signature verified]} hmac-key]
+(defn verify-server-signature [{:keys [algorithm verification-data signature verified] :as payload}
+                               hmac-key]
   (let [expected-signature (hmac-hex algorithm 
                                      (hash-hex algorithm verification-data) 
                                      hmac-key)
-        ;; FIXME: Cannot invoke "java.lang.CharSequence.length()" because "this.text" is null
-        verification-data (encoding/extract-params verification-data)
-        now (now)
+        extracted-params (encoding/extract-params verification-data)
+        current-time (now)
         ]
     {:verified (and verified
-                    (:verified verification-data)
-                    (signature-not-expired? verification-data now) 
+                    (:verified extracted-params)
+                    ;; we get :expired key from parsing verification-data
+                    (signature-not-expired? extracted-params current-time) 
                     (= signature expected-signature))
-     :verification-data (update-in verification-data [:verified] #(parse-boolean %))
+     :verification-data (update-in extracted-params [:verified] #(parse-boolean %))
      }
     )
   )

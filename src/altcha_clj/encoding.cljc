@@ -47,10 +47,18 @@
 (defn decode-base64 
   "Cross platform helper function for decoding base64"
   [payload]
-  #?(:clj (String. (.decode (Base64/getDecoder) payload))
+  #?(:clj (read-string (String. (.decode (Base64/getDecoder) payload)))
      :cljs (js/btoa payload)
      )
   )
+
+#?(:clj (defn encode-base64 
+  "Base64 encoder. For testing only, so no Cljs."
+  [payload]
+  (-> (Base64/getEncoder)
+      (.encodeToString (.getBytes (str payload) "UTF-8"))
+      ) 
+  ))
 
 (defn json->clj 
   "Converts a JSON string to a corresponding Clojure object.
