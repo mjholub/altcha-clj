@@ -5,14 +5,30 @@
    [altcha-clj.polyfill :refer [now parse-int]]
    [clojure.string :as str]))
 
-(defn- is-not-past? [expire-time]
-  #?(:clj
-     (and expire-time
-          (> (Long/parseLong expire-time) (quot (System/currentTimeMillis) 1000)))
-     :cljs (and expire-time
-     (> (js/parseInt expire-time) (quot (js/Date.now) 1000)))
-     )
-  )
+(defn- is-not-past?
+  "Checks if the expiration time is not in the past relative to the reference time"
+  [expire-time reference-time]
+(let [expiration (if (empty? expire-time) 
+                     0
+                     (parse-int expire-time))]
+    (> expiration (quot reference-time 1000))))
+
+(defn assoc-if-some
+  "Conditionally adds a key `k` to value `v` pairs 
+  to map `m`. If no args are present or `v` is nil, returns `m`.
+  If passed a variadic argument of arbitrary number of `kvs` 
+  key-value pairs, adds each of them that is not nil to `m`"
+  ([m] m)
+  ([m k v]
+   (if (some? v)
+     (assoc m k v)
+     m))
+  (
+   [m k v & kvs]
+   (let [ret (assoc-if-some m k v)]
+     (if kvs
+       (recur ret (first kvs) (second kvs) (nnext kvs))
+       ret))))
 
 (defn check-solution
   "Verifies the solution received from the client, returning
@@ -27,31 +43,48 @@
     - `signature`
   - `hmac-key` - the HMAC key used for verification.
   - `check-expiration?` - whether to check if the challenge has not expired.
-  Recommended to be kept as true"
-[payload hmac-key check-expiration?]
+  Recommended to be kept as true
+  - `max-number` - optional max-number override. If you're facing issues with
+  false negatives, try adding your value to this function's args
+  - `reference-time` - reference timestamp to compare as the timestamp 
+  which must be greater than the challenge's `created-at` value
+  "
+[payload hmac-key check-expiration? & {:keys [max-number reference-time]}]
 (let [{:keys [algorithm challenge number salt signature]} payload
-      params (encoding/extract-params salt)
+      params (encoding/extract-params (:salt challenge))
       expire-time (:expires params)
-      ]
-   (when (or (not check-expiration?)
-              (is-not-past? expire-time))
-      (let [expected-challenge (create-challenge {:algorithm algorithm
+      expected-challenge (create-challenge (assoc-if-some {:algorithm algorithm
                                                   :hmac-key hmac-key
                                                   :number number
-                                                  :salt salt})]
-        (and (= expected-challenge challenge)
-             (= (:signature expected-challenge) signature)))))
-  )
+                                                  :salt salt}
+                                                  :expires (:expires params)
+                                                  :max-number (first max-number)
+                                                  )) 
+        base-result (and (= (:challenge expected-challenge) (:challenge challenge))
+             (= (:signature expected-challenge) signature))
+        not-expired? (if check-expiration? (is-not-past? expire-time reference-time) true)
+        result (and base-result not-expired?)]
+  (when-not result
+    (println "expected challenge: " (pr-str expected-challenge))
+    (println "payload: " (pr-str payload))
+    )
+
+  result
+))
+  
 
 
 (defn check-solution-base64 
   "Verifies a base64 encoded solution"
-  [b64-payload hmac-key check-expiration?]
+  [b64-payload hmac-key check-expiration? & {:keys [max-number reference-time]}]
   (->
     b64-payload
     (encoding/decode-base64)
     (encoding/json->clj)
-    (check-solution hmac-key check-expiration?)  
+    (check-solution hmac-key check-expiration? 
+                    :max-number max-number
+                    :reference-time reference-time
+                    )  
   ))
 
 (defn signature-not-expired? [verification-data current]

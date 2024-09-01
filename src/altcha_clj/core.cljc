@@ -89,11 +89,9 @@
 
 (defn calculate-expiration-offset
  "Adds `offset-secs` * 1000 to the `start-ts-ms` timestamp value"
-  [start-ts-ms offset-secs from-now?]
-  (if from-now?
-    (+ (* 1000 offset-secs) (now))
-    (+ (* 1000 offset-secs) start-ts-ms))
-  )
+  [start-ts-ms offset-secs]
+    (+ (* 1000 (parse-int offset-secs)) start-ts-ms))
+  
 
 (defn create-challenge 
   "Creates a challenge for the client to solve.
@@ -101,15 +99,20 @@
   - `:algorithm` - algorithm for creating a digest of the challenge, default is **SHA-256**.
      For ClojureScript, it will always be SHA-256.
      Can also be **SHA-1** or **SHA-512**
-  - `:max-number` - highest random number used for generating the challenge. Default is 1e6
-  - `:salt-len` - length of the salt. Default is 12
-  - `:expires` - optional, recommended. Expiration time of the challenge validity in seconds.
-  The value for this parameter is the **offset from current time**, **not** a precalculated value
-  of an UNIX timestamp. This function will, however, assign a timestamp value 
-  to this key in the resulting map, as a result of calculating  
-  `(+ (* 1000 e) (current-time-ms))`  
-  by calling `calculate-expiration-offset`
+  - `:max-number` - highest random number used for generating the challenge. Default is 1e6, represented as a fixed point integer.
+  - `:salt-len` - length of the salt. Default is 12. Longer salts are more computationally expensive.
+  - `:expires` - optional. This value will be implicitly bound if `ttl` 
+  is present 
+  by calling `calculate-expiration-offset`. See below.
+  - `ttl` - Time-to-live in seconds. Needed for calculating challenge expiration time.
+  You don't need to convert a string value to an integer here, it'll be converted for you.
+  Note the difference between `ttl` and `expires`. Expires is returned by the handler,
+  while ttl must be present in the challenge response salt to compare the hashes
+  of the challenge in the initial challenge and the challenge response.
   `current-time-ms` is platform-specfic pseudocode placeholder here
+  - `current-time` - current UNIX millisecond timestamp.
+    Pass this argument to make the calculation of challenge expiration more 
+    deterministic. Otherwise it will be generated as a side effect inside `create-challenge`
   - `:hmac-key` - required, the secret key for creating the HMAC signature (a string value, not a path)
   - `:params` - optional, additional parameters to include in the salt
 
@@ -123,9 +126,13 @@
         salt-len (:salt-len options default-salt-len)
         params (when-let [p (:params options)]
                  (str/join "&" (map (fn [[k v]] (str (name k) "=" v)) p)))
+        ttl (when-let [_ttl (:ttl options)]
+              (str "ttl=" (:ttl options)) 
+              )
+        current-time (get :current-time options (now))
         expires (when-let [e (:expires options)]
-          (str "expires=" (calculate-expiration-offset 0 e true)))
-        salt-params (str/join "&" (remove str/blank? [params expires]))
+          (str "expires=" (calculate-expiration-offset current-time e)))
+        salt-params (str/join "&" (remove str/blank? [params expires ttl]))
         salt (if-let [s (:salt options)]
                (if (str/blank? salt-params) s (str s "?" salt-params))
                (let [random-salt (ab2hex (random-bytes salt-len))]
@@ -135,8 +142,10 @@
         number (or (:number options) (random-int max-number))
         challenge (hash-hex algorithm (str salt number))
         signature (hmac-hex algorithm challenge (:hmac-key options))]
+    (println "value for 'expires': " expires)
     {:algorithm algorithm
      :challenge challenge
+     :created-at current-time
      :maxnumber max-number
      :salt salt
      :signature signature}))
