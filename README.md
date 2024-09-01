@@ -1,10 +1,12 @@
+[![Clojars Project](https://img.shields.io/clojars/v/me.mjholub/altcha-clj.svg)](https://clojars.org/me.mjholub/altcha-clj)
+
 # altcha-clj
 
 A Clojure/script library designed for working with [Altcha](https://altcha.org) challenges.
 
 ## Usage
 
-For documentation details, see Clojars.
+For documentation details, see [Cljdoc](https://cljdoc.org/d/me.mjholub/altcha-clj).
 
 ## License
 
