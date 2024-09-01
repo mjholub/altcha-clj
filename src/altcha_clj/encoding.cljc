@@ -72,6 +72,6 @@
   ClojureScript implementation uses the native JSON.parse
   JVM version uses Cheshire."
   [json-str]
-  #?(:clj (json/parse-string json-str)
+  #?(:clj (json/parse-string json-str true)
     :cljs (js->clj (js/JSON.parse json-str) :keywordize-keys true)
   ))
