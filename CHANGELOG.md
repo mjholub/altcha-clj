@@ -1,9 +1,15 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
-## Unreleased
+## 1.2.0 - 2024-09-02
 ### Fixed 
 - Added missing test hook for `calculate-expiration-offset`
+- Challenge expiration is now more pure and deterministic, some related petty errors fixed
+### Added
+- Some extra tests, particularly for various challenge response configurations
+- Additional parameters for `create-challenge` - `:ttl` and `:current-time`
+### Changed
+- Default max-number is now cast to an integer (1e6 is a `Double` by default)
 
 ## 1.1.0 - 2024-09-01
 ### Fixed 

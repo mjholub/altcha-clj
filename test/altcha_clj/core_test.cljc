@@ -19,13 +19,13 @@
 
 (t/deftest test-calculate-expiration-offset
   (t/testing "Correctly adds the number of ms"
-    (t/is (= 5010 (altcha/calculate-expiration-offset 10 5 false)))
+    (t/is (= 5010 (altcha/calculate-expiration-offset 10 5)))
     )
   #?(:clj (t/testing "The result is of type java.lang.Long"
      (t/is (= "class java.lang.Long"
-              (str (type (altcha/calculate-expiration-offset 10 5 false)))))
+              (str (type (altcha/calculate-expiration-offset 10 5)))))
      (t/is (= "class java.lang.Long"
-           (str (type (altcha/calculate-expiration-offset 0 15 true))))
+           (str (type (altcha/calculate-expiration-offset 0 15))))
            ))
   ))
 
@@ -53,13 +53,11 @@
       (let [challenge (altcha/create-challenge {:hmac-key "test-key" :salt "custom-salt"})]
         (t/is (= "custom-salt" (:salt challenge)))))
     
-    (t/testing "Expires parameter" ;; NOTE: in this case as the implementation is
-     ;; not 100% pure, we can only do a fuzzy check.
-     ;; See the test for `calculate-expiration-offset`
-      (let [expires 60
+    (t/testing "Expires parameter" 
+      (let [ttl 60
             current-ts (now)
             lowest-correct-expire-ts (+ (* 1000) current-ts)
-            challenge (altcha/create-challenge {:hmac-key "test-key" :expires expires})]
+            challenge (altcha/create-challenge {:hmac-key "test-key" :ttl ttl})]
         (t/is (<= lowest-correct-expire-ts 
                   (parse-int (last (re-find #"expires=(\d+)" (:salt challenge))))))))
     

@@ -56,7 +56,9 @@
       expected-challenge (create-challenge (assoc-if-some {:algorithm algorithm
                                                   :hmac-key hmac-key
                                                   :number number
+                                                  :current-time reference-time
                                                   :salt salt}
+                                                  :ttl (:ttl params)
                                                   :expires (:expires params)
                                                   :max-number (first max-number)
                                                   )) 
@@ -64,11 +66,6 @@
              (= (:signature expected-challenge) signature))
         not-expired? (if check-expiration? (is-not-past? expire-time reference-time) true)
         result (and base-result not-expired?)]
-  (when-not result
-    (println "expected challenge: " (pr-str expected-challenge))
-    (println "payload: " (pr-str payload))
-    )
-
   result
 ))
   

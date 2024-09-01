@@ -41,21 +41,54 @@
     )
   )
 
+
+(def payload-common {:algorithm "SHA-256"
+                                         :number 420
+                                         :salt "LoremIpsum"})
+
+
+(defn- create-b64-payload [challenge]
+  (-> (assoc payload-common
+         :challenge challenge
+         :signature (:signature challenge)
+         )
+      (clj->json)
+      (encode-base64)
+  )
+  )
+
 (t/deftest test-check-solution-base64 
   (t/testing "Verifies a base64 encoded solution with good values"
-   (let [challenge (create-challenge {:algorithm "SHA-256"
+   (let [challenge (create-challenge (assoc payload-common
                                       :hmac-key mock-hmac-key
-                                      :number 42
-                                      :salt "LoremIpsum"})
-         verification-payload-raw {:algorithm "SHA-256"
-                                   :challenge challenge
-                                   :number 42
-                                   :salt "LoremIpsum"
-                                   :signature (:signature challenge)}
-         payload-json (clj->json verification-payload-raw)
-         payload-base64 (encode-base64 payload-json)
-                    ]
-     (t/is (true? (v/check-solution-base64 payload-base64 mock-hmac-key false)))
-     
+                                      ))
+         payload-base64 (create-b64-payload challenge)]
+     (t/is (true? (v/check-solution-base64 payload-base64 mock-hmac-key false)))   
      ))
+    (t/testing "Challenge created with max-number parameter set"
+      (let [challenge (create-challenge (assoc payload-common 
+                                               :max-number 9000
+                                               :hmac-key mock-hmac-key)) 
+            payload-base64 (create-b64-payload challenge)
+            ]
+        (t/is (true? (v/check-solution-base64 payload-base64 mock-hmac-key false 9000)))
+        )
+      )
+    (t/testing "With expiration"
+      (let [;; set expiration time to 90s
+            current-time (now)
+            challenge (create-challenge (assoc payload-common :hmac-key mock-hmac-key
+                                            :current-time current-time 
+                                            :ttl 90))
+            payload-base64 (create-b64-payload challenge)
+            ]
+        (println "challenge: " (pr-str challenge))
+        (t/is (true? (v/check-solution-base64 payload-base64 mock-hmac-key true
+                                              :reference-time current-time
+                                              )))
+        )
+      
+      )
+
+
   )
