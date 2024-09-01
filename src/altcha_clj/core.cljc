@@ -2,12 +2,12 @@
   (:refer-clojure :exclude [empty?])
   (:require
    #?(:cljs [goog.crypt :as crypt])
-   [altcha-clj.polyfill :refer [now]]
+   [altcha-clj.polyfill :refer [now parse-int]]
    [clojure.string :as str])
             #?(:cljs (:import
                       [goog.crypt Hmac Sha256])))
 
-(def ^:private ^:const default-max-number 1e6)
+(def ^:private ^:const default-max-number (int 1e6))
 (def ^:private ^:const default-salt-len 12)
 (def ^:private ^:const default-alg "SHA-256") ;; or SHA-1/SHA-512
 

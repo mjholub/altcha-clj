@@ -37,7 +37,7 @@
       (let [challenge (altcha/create-challenge {:hmac-key "test-key"})]
         (t/is (= "SHA-256" (:algorithm challenge)))
         (t/is (string? (:challenge challenge)))
-        (t/is (= 1e6 (:maxnumber challenge)))
+        (t/is (= (int 1e6) (:maxnumber challenge)))
         (t/is (string? (:salt challenge)))
         (t/is (string? (:signature challenge)))))
     
@@ -70,7 +70,7 @@
         (t/is (str/includes? (:salt challenge) "custom=param"))
         (t/is (str/includes? (:salt challenge) "another=value"))))
     
-    (t/testing "Determint/istic output"
+    (t/testing "Deterministic output"
       (let [challenge1 (altcha/create-challenge {:hmac-key "test-key" :salt "fixed-salt" :number 42})
             challenge2 (altcha/create-challenge {:hmac-key "test-key" :salt "fixed-salt" :number 42})]
         (t/is (= challenge1 challenge2))))
