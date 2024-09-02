@@ -44,12 +44,16 @@
   - `hmac-key` - the HMAC key used for verification.
   - `check-expiration?` - whether to check if the challenge has not expired.
   Recommended to be kept as true
+
+  Keys:
   - `max-number` - optional max-number override. If you're facing issues with
   false negatives, try adding your value to this function's args
   - `reference-time` - reference timestamp to compare as the timestamp 
   which must be greater than the challenge's `created-at` value
+  - `throw-on-false?` - whether to throw an error if the result is false.
+  The result will be an ex-message with `params`, `payload`, `not-expired?` and `expected-challenge`
   "
-[payload hmac-key check-expiration? & {:keys [max-number reference-time]}]
+[payload hmac-key check-expiration? & {:keys [max-number reference-time throw-on-false?]}]
 (let [{:keys [algorithm challenge number salt signature]} payload
       params (encoding/extract-params 
                (encoding/decode-url-component (get challenge :salt salt)))
@@ -67,6 +71,15 @@
              (= (:signature expected-challenge) signature))
         not-expired? (if check-expiration? (is-not-past? expire-time reference-time) true)
         result (and base-result not-expired?)]
+  (when (and throw-on-false? (not result))
+    (throw (ex-info "Challenge validation failed. "
+           {:payload payload
+            :params params
+            :not-expired? not-expired?
+            :expected-challenge expected-challenge
+            })
+           )
+    )
   result
 ))
   

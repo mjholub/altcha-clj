@@ -1,6 +1,13 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 1.2.4 - 2024-09-02
+### Fixed 
+- getting `current-time` incorrectly branching to calling `(now)` in `create-challenge`
+### Added
+- `throw-on-false?` key for `check-solution` for throwing and `ex-info` message 
+with operation details in case of a false result
+
 ## 1.2.3 - 2024-09-02
 ### Fixed
 - `get` arguments order in `check-solution`
