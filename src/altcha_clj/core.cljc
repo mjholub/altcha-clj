@@ -1,7 +1,10 @@
 (ns altcha-clj.core
   (:refer-clojure :exclude [empty?])
   (:require
-   #?(:cljs [goog.crypt :as crypt])
+   #?(:cljs [goog.crypt :as crypt]
+      :clj [pandect.core :refer [sha1-hmac sha256-hmac sha512-hmac
+                                  sha1 sha256 sha512]]
+      )
    [altcha-clj.polyfill :refer [now parse-int]]
    [clojure.string :as str])
             #?(:cljs (:import
@@ -19,18 +22,18 @@
 
 ;; false negative, used in hmac-hex
 #_{:clj-kondo/ignore [:unused-private-var]} 
-(defn- get-hmac-name
-  "Helper function to convert JS algorithm name to one known
-  to javax.crypto.Mac/getInstance"
-  [alg-name]
+#?(:clj (defn- hmac-dispatcher
+  "Clojure (JVM) function for selecting the appropriate HMAC signing function
+  from the pandect library"
+  [alg-name data hmac-key]
   (case alg-name
-    "SHA-1" "HMACSHA1"
-    "SHA-256" "HMACSHA256"
-    "SHA-512" "HMACSHA512"
+    "SHA-1" (sha1-hmac data hmac-key)
+    "SHA-256" (sha256-hmac data hmac-key)
+    "SHA-512" (sha512-hmac data hmac-key)
     (throw (ex-info "Invalid algorithm!" {:got alg-name
                                           :want #{"SHA-1" "SHA-256" "SHA-512"}}))
     )
-  )
+  ))
 
 #?(:clj
    (defn random-bytes [n]
@@ -47,7 +50,7 @@
    (defn- ab2hex
     "Converts a byte array to a hexadecimal string"
      [byte-array]
-     (apply str (map #(format "%02x" (bit-and % 0xff)) byte-array)))
+     (apply str (map #(format "%02x" %) byte-array)))
    :cljs
    (defn- ab2hex [array-buffer]
      (crypt/byteArrayToHex array-buffer)))
@@ -64,9 +67,11 @@
      "Generates a hexadecimal string representation of the challenge
      message digest created using the selected algorithm"
      [algorithm data]
-     (let [md (java.security.MessageDigest/getInstance algorithm)
-           hash-bytes (.digest md (.getBytes data "UTF-8"))]
-       (ab2hex hash-bytes)))
+     (case algorithm 
+       "SHA-1" (sha1 data)
+       "SHA-256" (sha256 data)
+       "SHA-512" (sha512 data)
+       ))
    :cljs
    (defn hash-hex
     "Generates a hexadecimal string representation of the SHA-256 digest of the challenge message"
@@ -77,7 +82,7 @@
        (ab2hex (.digest sha256)))))
 
 #?(:clj (defn- secret-key-inst [key mac]
-  (SecretKeySpec. (.getBytes key) (.getAlgorithm mac))
+  (SecretKeySpec. (.getBytes key "UTF-8") (.getAlgorithm mac))
   )
 )
 
@@ -86,15 +91,8 @@
     "Returns the HMAC-encoded value of the data. Params
     - `algorithm` - 'SHA-256', 'SHA-512' or 'SHA-1'"
      [algorithm data key]
-    (let [mac (Mac/getInstance (get-hmac-name algorithm))
-        secret-key (secret-key-inst key mac)
-              ]
-    (-> (doto mac 
-          (.init secret-key)
-          (.update (.getBytes data))
-          )
-        .doFinal)
-    ))
+    (hmac-dispatcher algorithm data key)
+     )
    :cljs
    (defn hmac-hex [algorithm data key]
      (let [hmac (Hmac. (Sha256.) (crypt/stringToUtf8ByteArray key))

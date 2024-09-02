@@ -6,7 +6,12 @@ A Clojure/script library designed for working with [Altcha](https://altcha.org) 
 
 ## Usage
 
-For documentation details, see [Cljdoc](https://cljdoc.org/d/me.mjholub/altcha-clj).
+For documentation details, see [Cljdoc](https://cljdoc.org/d/me.mjholub/altcha-clj)
+or [Altcha general documentation](https://altcha.org/docs/).
+
+### Requirements
+
+ClojureScript version has no special requirements. JVM version requires JDK 18 or higher.
 
 ## License
 
