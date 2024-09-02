@@ -61,7 +61,10 @@
       expire-time (:expires params)
       ;; remove parameters from salt
       salt-base (first (str/split salt-full #"\?"))
-      current-time (- (parse-int expire-time) (* 1000 (parse-int (:ttl params))))
+      current-time (if (some? expire-time)
+      (- (parse-int expire-time) (* 1000 (parse-int (:ttl params))))
+      reference-time
+      )
       expected-challenge (create-challenge (assoc-if-some {:algorithm algorithm
                                                   :hmac-key hmac-key
                                                   :number number

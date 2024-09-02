@@ -1,4 +1,4 @@
-(defproject me.mjholub/altcha-clj "1.3.0"
+(defproject me.mjholub/altcha-clj "1.4.0-RC1"
   :description "A Clojure/script library designed for working with Altcha challenges."
   :url "https://github.com/mjholub/altcha-clj"
   :license {:name "LGPL-3.0-or-later"

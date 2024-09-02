@@ -1,9 +1,15 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## Unreleased
+### Changed
+- JVM-based cryptographic/hashing operations use the pandect library by default.
+### Fixed
+- Missing `(if-some)` form in `check-solution` for `expire-time`.
+
 ## 1.3.0 - 2024-09-02
 ### Fixed
-- Stripping parameters from salt during verification to prevent duplication
+- Stripping parameters from salt during verification to prevent duplication.
 
 ## 1.2.6 - 2024-09-02
 ### Fixed
