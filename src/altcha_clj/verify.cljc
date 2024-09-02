@@ -51,7 +51,8 @@
   "
 [payload hmac-key check-expiration? & {:keys [max-number reference-time]}]
 (let [{:keys [algorithm challenge number salt signature]} payload
-      params (encoding/extract-params (:salt challenge))
+      params (encoding/extract-params 
+               (encoding/decode-url-component (get :salt challenge salt)))
       expire-time (:expires params)
       expected-challenge (create-challenge (assoc-if-some {:algorithm algorithm
                                                   :hmac-key hmac-key
@@ -60,9 +61,9 @@
                                                   :salt salt}
                                                   :ttl (:ttl params)
                                                   :expires (:expires params)
-                                                  :max-number (first max-number)
+                                                  :max-number max-number
                                                   )) 
-        base-result (and (= (:challenge expected-challenge) (:challenge challenge))
+        base-result (and (= (:challenge expected-challenge) (or (:challenge challenge) challenge))
              (= (:signature expected-challenge) signature))
         not-expired? (if check-expiration? (is-not-past? expire-time reference-time) true)
         result (and base-result not-expired?)]
