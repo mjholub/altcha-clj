@@ -5,7 +5,13 @@
    [altcha-clj.polyfill :refer [now parse-int]]
    [clojure.string :as str])
             #?(:cljs (:import
-                      [goog.crypt Hmac Sha256])))
+                      [goog.crypt Hmac Sha256]
+
+                      )
+               :clj (:import [javax.crypto Mac]
+                             [javax.crypto.spec SecretKeySpec]
+                             )
+               ))
 
 (def ^:private ^:const default-max-number (int 1e6))
 (def ^:private ^:const default-salt-len 12)
@@ -18,9 +24,9 @@
   to javax.crypto.Mac/getInstance"
   [alg-name]
   (case alg-name
-    "SHA-1" "HmacSHA1"
-    "SHA-256" "HmacSHA256"
-    "SHA-512" "HmacSHA512"
+    "SHA-1" "HMACSHA1"
+    "SHA-256" "HMACSHA256"
+    "SHA-512" "HMACSHA512"
     (throw (ex-info "Invalid algorithm!" {:got alg-name
                                           :want #{"SHA-1" "SHA-256" "SHA-512"}}))
     )
@@ -41,7 +47,7 @@
    (defn- ab2hex
     "Converts a byte array to a hexadecimal string"
      [byte-array]
-     (apply str (map #(format "%02x" %) byte-array)))
+     (apply str (map #(format "%02x" (bit-and % 0xff)) byte-array)))
    :cljs
    (defn- ab2hex [array-buffer]
      (crypt/byteArrayToHex array-buffer)))
@@ -70,17 +76,25 @@
        (.update sha256 data-bytes)
        (ab2hex (.digest sha256)))))
 
+#?(:clj (defn- secret-key-inst [key mac]
+  (SecretKeySpec. (.getBytes key) (.getAlgorithm mac))
+  )
+)
+
 #?(:clj
    (defn hmac-hex
     "Returns the HMAC-encoded value of the data. Params
     - `algorithm` - 'SHA-256', 'SHA-512' or 'SHA-1'"
      [algorithm data key]
-     (let [secret-key (javax.crypto.spec.SecretKeySpec. 
-                        (.getBytes key "UTF-8")
-                        algorithm)
-           mac (javax.crypto.Mac/getInstance (get-hmac-name algorithm))]
-       (.init mac secret-key)
-       (ab2hex (.doFinal mac (.getBytes data "UTF-8")))))
+    (let [mac (Mac/getInstance (get-hmac-name algorithm))
+        secret-key (secret-key-inst key mac)
+              ]
+    (-> (doto mac 
+          (.init secret-key)
+          (.update (.getBytes data))
+          )
+        .doFinal)
+    ))
    :cljs
    (defn hmac-hex [algorithm data key]
      (let [hmac (Hmac. (Sha256.) (crypt/stringToUtf8ByteArray key))
@@ -117,7 +131,8 @@
   - `:params` - optional, additional parameters to include in the salt
 
   Changing the following parameters to hardcoded values is not recommended outside development settings
-  - `:salt` - optional, custom salt to use instead of generating one
+  - `:salt` - optional, custom salt to use instead of generating oneo
+  Used for validation
   - `:number` - optional, custom number to use instead of generating one
   "
   [options]
@@ -131,10 +146,15 @@
               )
         current-time (get options :current-time (now))
         expires (when-let [e (:ttl options)]
-          (str "expires=" (calculate-expiration-offset current-time e)))
+          (if-let [exp-override (:expires options)]
+          (str "expires=" exp-override)
+          (str "expires=" (calculate-expiration-offset current-time e))))
         salt-params (str/join "&" (remove str/blank? [params expires ttl]))
         salt (if-let [s (:salt options)]
+               ;; use the pre-computed salt. if params are present, append them after 
+               ;; a question mark with '&' separators
                (if (str/blank? salt-params) s (str s "?" salt-params))
+               ;; generate a random salt
                (let [random-salt (ab2hex (random-bytes salt-len))]
                  (if (str/blank? salt-params)
                    random-salt

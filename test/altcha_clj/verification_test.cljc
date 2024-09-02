@@ -87,8 +87,25 @@
                                               :reference-time current-time
                                               )))
         )
-      
       )
-
+    (t/testing "(REGRESSION): trimming params from salt"
+      (let [challenge-base64 "eyJhbGdvcml0aG0iOiJTSEEtMjU2IiwiY2hhbGxlbmdlIjoiZTJlOTAzNDBhNTgxYmViOWZkY2M4ZWI5NDg2MDQ4N2Q2MjNjZTIyYmE1N2ZkYjA5YzYyZDUyM2YwZDRmYzVjYSIsIm51bWJlciI6Mzg4MDEsInNhbHQiOiI1OTFlMjYwMmIwNTc2NTVkMGE3NzQ2NDhhNTk2MGYwYzBmYWUxNzc4MjMxNjY3ZDhhZDhlOGVkNzE3MzJhZWZmNDViNDk2YzZhMWNkOGM4NzRkOTE4NmUyYzlmNDFjNTU1OWE4ZWFiMDZiOWIxN2JhODUzOTc5MmY4Y2Q0YmM3Mz9leHBpcmVzPTE3MjUzNzc0NjUmdHRsPTkwIiwic2lnbmF0dXJlIjoiNjU3MzM1ZDkwMmQ0OThhNTZmZTY2Mjk5OWI0YzUwZTQ1NTkyNzYzMGIyNTBjZmIwZDk0Y2ZhNTBlYjM4YWI1ZSIsInRvb2siOjcxNn0="
+            hmac-key "testkey"
+            fallback-hmac (str (random-uuid))
+            max-number 100000
+            reference-time (now)
+            result (v/check-solution-base64 challenge-base64
+                                                 (or hmac-key fallback-hmac)
+                                                 true
+                                                 :max-number max-number
+                                                 :reference-time reference-time
+                                                 :throw-on-false? false
+                                                 )
+            ]
+        (t/is (true? result))
+        )
 
   )
+
+  )
+
