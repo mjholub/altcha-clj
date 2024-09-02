@@ -42,7 +42,7 @@
   (into {}
         (map 
           (fn [[k v]] [(keyword k) v])
-            (map #(str/split % #"=") (str/split salt #"\&"))))
+            (map #(str/split % #"=") (str/split salt #"(\&|\?)"))))
     )
 
 (defn decode-base64 
