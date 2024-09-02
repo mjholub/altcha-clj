@@ -86,8 +86,8 @@
 
 
 (defn check-solution-base64 
-  "Verifies a base64 encoded solution"
-  [b64-payload hmac-key check-expiration? & {:keys [max-number reference-time]}]
+  "Verifies a base64 encoded solution. For parameters documenation, see `check-solution`"
+  [b64-payload hmac-key check-expiration? & {:keys [max-number reference-time throw-on-false?]}]
   (->
     b64-payload
     (encoding/decode-base64)
@@ -95,6 +95,7 @@
     (check-solution hmac-key check-expiration? 
                     :max-number max-number
                     :reference-time reference-time
+                    :throw-on-false throw-on-false?
                     )  
   ))
 
