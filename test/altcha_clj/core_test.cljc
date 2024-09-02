@@ -3,6 +3,10 @@
    #?(:clj [clojure.test :as t]
                :cljs [cljs.test :as t])
    [altcha-clj.core :as altcha]
+   [altcha-clj.encoding-test :refer [decode-base64-test
+                                     decode-url-component-test
+                                     extract-params-test json->clj-test
+                                     test-encode-params]]
    [altcha-clj.polyfill :refer [now parse-int]]
    [clojure.string :as str]))
 #?(:clj
@@ -96,7 +100,13 @@
 #?(:clj
    (defn test-ns-hook []
      (test-calculate-expiration-offset)
-     (create-challenge-test))
+     (create-challenge-test)
+     (test-encode-params)
+     (decode-url-component-test)
+     (extract-params-test)
+     (decode-base64-test)
+     (json->clj-test)
+     )
    :cljs
    (defn ^:export run-tests []
      (cljs.test/run-tests 'altcha-clj.core-test)))
