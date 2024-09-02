@@ -23,7 +23,7 @@
 :cljs (defn encode-params 
   "Encodes the challenge parameters as a URL (using `URLSearchParams`)"
   [params]
-  (-> (js/URLSearchParams.)
+  (-> (js/encodeURIComponent.)
       (doto (fn [search-params]
               (doseq [[k v] params]
                 (.append search-params (name k) (str v)))))
@@ -37,11 +37,27 @@
   )
 
 (defn extract-params 
-  "Extracts the URL-encoded parameters map from the salt"
+  "Extracts the URL-encoded parameters map from the salt.
+  The parameters must be simple types 
+  (i.e. numbers, strings, nil/null or keywords. Collections are not supported yet)"
   [salt]
   (into {}
         (map 
-          (fn [[k v]] [(keyword k) v])
+          (fn [[k v]]
+                       (let [parsed-v (cond 
+                                        (or (= "null" v) (= "nil" v) (= "" v) (nil? v))
+                                        nil
+                                        (str/starts-with? v "%3A")
+                                        (keyword (last (str/split v #"%3A" 2)))
+                                        :else v
+                                       )
+                             v-spaces (if (some? parsed-v)
+                                        (str/replace parsed-v #"%20" " ")
+                                        parsed-v
+                                        )
+                             ]
+            [
+                       (keyword k) v-spaces]))
             (map #(str/split % #"=") (str/split salt #"(\&|\?)"))))
     )
 
