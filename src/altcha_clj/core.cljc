@@ -129,7 +129,7 @@
         ttl (when-let [_ttl (:ttl options)]
               (str "ttl=" (:ttl options)) 
               )
-        current-time (get :current-time options (now))
+        current-time (get options :current-time (now))
         expires (when-let [e (:ttl options)]
           (str "expires=" (calculate-expiration-offset current-time e)))
         salt-params (str/join "&" (remove str/blank? [params expires ttl]))
