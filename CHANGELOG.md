@@ -1,7 +1,7 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
-## Unreleased
+## 1.4.0 - 2024-09-02
 ### Changed
 - JVM-based cryptographic/hashing operations use the pandect library by default.
 ### Fixed

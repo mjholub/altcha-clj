@@ -6,6 +6,9 @@ A Clojure/script library designed for working with [Altcha](https://altcha.org) 
 
 ## Usage
 
+When importing this library, you might want to consider adding an exclusion for 
+`org.bouncycastle/bcprov-ext-jdk18on`, especially if not using Leiningen.
+
 For documentation details, see [Cljdoc](https://cljdoc.org/d/me.mjholub/altcha-clj)
 or [Altcha general documentation](https://altcha.org/docs/).
 

@@ -88,8 +88,8 @@
                                               )))
         )
       )
-    (t/testing "(REGRESSION): trimming params from salt"
-      (let [challenge-base64 "eyJhbGdvcml0aG0iOiJTSEEtMjU2IiwiY2hhbGxlbmdlIjoiZTJlOTAzNDBhNTgxYmViOWZkY2M4ZWI5NDg2MDQ4N2Q2MjNjZTIyYmE1N2ZkYjA5YzYyZDUyM2YwZDRmYzVjYSIsIm51bWJlciI6Mzg4MDEsInNhbHQiOiI1OTFlMjYwMmIwNTc2NTVkMGE3NzQ2NDhhNTk2MGYwYzBmYWUxNzc4MjMxNjY3ZDhhZDhlOGVkNzE3MzJhZWZmNDViNDk2YzZhMWNkOGM4NzRkOTE4NmUyYzlmNDFjNTU1OWE4ZWFiMDZiOWIxN2JhODUzOTc5MmY4Y2Q0YmM3Mz9leHBpcmVzPTE3MjUzNzc0NjUmdHRsPTkwIiwic2lnbmF0dXJlIjoiNjU3MzM1ZDkwMmQ0OThhNTZmZTY2Mjk5OWI0YzUwZTQ1NTkyNzYzMGIyNTBjZmIwZDk0Y2ZhNTBlYjM4YWI1ZSIsInRvb2siOjcxNn0="
+    (t/testing "(REGRESSION/inegration): trimming params from salt/real world response"
+      (let [challenge-base64 "eyJhbGdvcml0aG0iOiJTSEEtMjU2IiwiY2hhbGxlbmdlIjoiNjlhZGVlY2MwYTJkMzRiNmRmOTc0ODUxMDVmNDQ2ODIwOTI2NGNkYmI4ZmUzMmVlNzU0ZGQ0MzMwYmQyNDAxZiIsIm51bWJlciI6NDgzMDcsInNhbHQiOiJjYjhkZGRmZmQ0MzlkNzU5YTQxMzA5ZmFjOGU2NGUzOWU0ZTVjNjYyYTM4NzFlNWU4MTNkZmQ3ZDEyZmM1YTIzZDUwZGJhM2M2OWNmNTU5NTg3ODgzMzY5N2RlYTEyYzgzZjM2MzI5ZjYxYjlkZDM0ZWI2YzYwZjZmYWIyYzhiMz9leHBpcmVzPTE3MjUzOTA1MDAmdHRsPTkwIiwic2lnbmF0dXJlIjoiNzU4MTA4YmQ4ZjhlN2ZjZDlmNWM3ZjNkYmM1MmI5YWVlMWI2NTcxMzRiZDNhMTczMGVmNzE2OTFjNTg5ODE4YyIsInRvb2siOjEyMTZ9"
             hmac-key "testkey"
             fallback-hmac (str (random-uuid))
             max-number 100000
