@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 1.2.1 - 2024-09-02
+### Fixed 
+- More robust handling of some encoding edge cases
+- URL parameters are now decoded before being extracted into a map during salt validation
+
 ## 1.2.0 - 2024-09-02
 ### Fixed 
 - Added missing test hook for `calculate-expiration-offset`
