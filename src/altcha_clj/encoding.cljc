@@ -39,7 +39,8 @@
 (defn extract-params 
   "Extracts the URL-encoded parameters map from the salt.
   The parameters must be simple types 
-  (i.e. numbers, strings, nil/null or keywords. Collections are not supported yet)"
+  (i.e. numbers, strings, nil/null or keywords. Collections are not supported yet)  
+  Special characters must be first decoded by `decode-url-component`"
   [salt]
   (into {}
         (map 
@@ -52,7 +53,7 @@
                                         :else v
                                        )
                              v-spaces (if (some? parsed-v)
-                                        (str/replace parsed-v #"%20" " ")
+                                        (str/replace parsed-v #"(%20|\+)" " ")
                                         parsed-v
                                         )
                              ]

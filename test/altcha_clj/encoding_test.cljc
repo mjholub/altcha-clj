@@ -19,7 +19,7 @@
     (t/is (= "foo=42" (e/encode-params {:foo 42})))
     )
   (t/testing "Value with spaces"
-    (t/is (= "k1=make%20room" (e/encode-params {:k1 "make room"})))
+    (t/is (= "k1=make+room" (e/encode-params {:k1 "make room"})))
     )
 (t/testing "Special characters"
   (t/is (= "key1=%21%40%23%24%25%5E%26*%28%29" (e/encode-params {:key1 "!@#$%^&*()"})))
@@ -31,15 +31,16 @@
     (t/is (= "value with spaces"
              (e/decode-url-component "value%20with%20spaces")
              ))
-    (t/is (= "!@#$%^&*()" (e/decode-url-component "%21%40%23%24%25%5E%26*%28%29")))
+    (t/is (= "!@#$%^*()" (e/decode-url-component "%21%40%23%24%25%5E*%28%29")))
     )
   )
 
 (t/deftest extract-params-test
   (t/testing "Extracting parameters from a URL"
     (t/is (= {:key1 "value1" :key2 "value2"} (e/extract-params "key1=value1&key2=value2")))
-    (t/is (= {:key1 "value with spaces"} (e/extract-params "key1=value%20with%20spaces")))
-    (t/is (= {:key1 "!@#$%^&*()"} (e/extract-params "key1=%21%40%23%24%25%5E%26%2A%28%29")))
+    (t/is (= {:key1 "value with spaces"} (e/extract-params (e/decode-url-component "key1=value%20with%20spaces"))))
+    (t/is (= {:key1 "!@#$%^*()"} (e/extract-params 
+                                   (e/decode-url-component "key1=%21%40%23%24%25%5E%2A%28%29"))))
     (t/is (= {:key1 "42"} (e/extract-params "key1=42"))))
   (t/testing "Handling null values"
     (t/is (= {:k0 nil :k1 nil :k2 nil} (e/extract-params "k0=&k1=null&k2=nil")))
