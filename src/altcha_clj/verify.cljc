@@ -95,7 +95,7 @@
     (check-solution hmac-key check-expiration? 
                     :max-number max-number
                     :reference-time reference-time
-                    :throw-on-false throw-on-false?
+                    :throw-on-false? throw-on-false?
                     )  
   ))
 

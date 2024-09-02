@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 1.2.6 - 2024-09-02
+## Fixed
+- typo from previous version
+
 ## 1.2.5 - 2024-09-02
 ### Fixed
 - added missing `throw-on-false?` parameter to `check-solution-base64`
