@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 1.2.3 - 2024-09-02
+### Fixed
+- `get` arguments order in `check-solution`
+
 ## 1.2.2 - 2024-09-02
 ### Fixed 
 - Handling flat response (without a nested `:challenge` object) in validation
