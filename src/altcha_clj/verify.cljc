@@ -1,4 +1,4 @@
-(ns altcha-clj.verify 
+(ns altcha-clj.verify
   (:require
    [altcha-clj.core :refer [create-challenge hash-hex hmac-hex]]
    [altcha-clj.encoding :as encoding]
@@ -8,7 +8,7 @@
 (defn- is-not-past?
   "Checks if the expiration time is not in the past relative to the reference time"
   [expire-time reference-time]
-(let [expiration (if (empty? expire-time) 
+  (let [expiration (if (empty? expire-time)
                      0
                      (parse-int expire-time))]
     (> expiration (quot reference-time 1000))))
@@ -23,8 +23,7 @@
    (if (some? v)
      (assoc m k v)
      m))
-  (
-   [m k v & kvs]
+  ([m k v & kvs]
    (let [ret (assoc-if-some m k v)]
      (if kvs
        (recur ret (first kvs) (second kvs) (nnext kvs))
@@ -53,95 +52,79 @@
   - `throw-on-false?` - whether to throw an error if the result is false.
   The result will be an ex-message with `params`, `payload`, `not-expired?` and `expected-challenge`
   "
-[payload hmac-key check-expiration? & {:keys [max-number reference-time throw-on-false?]}]
-(let [{:keys [algorithm challenge number salt signature]} payload
-      salt-full (get challenge :salt salt)
-      params (encoding/extract-params 
-               (encoding/decode-url-component salt-full))
-      expire-time (:expires params)
+  [payload hmac-key check-expiration? & {:keys [max-number reference-time throw-on-false?]}]
+  (let [{:keys [algorithm challenge number salt signature]} payload
+        salt-full (get challenge :salt salt)
+        params (encoding/extract-params
+                (encoding/decode-url-component salt-full))
+        expire-time (:expires params)
       ;; remove parameters from salt
-      salt-base (first (str/split salt-full #"\?"))
-      current-time (if (some? expire-time)
-      (- (parse-int expire-time) (* 1000 (parse-int (:ttl params))))
-      reference-time
-      )
-      expected-challenge (create-challenge (assoc-if-some {:algorithm algorithm
-                                                  :hmac-key hmac-key
-                                                  :number number
-                                                  :current-time current-time
-                                                  :salt salt-base}
-                                                  :ttl (:ttl params)
-                                                  :expires (:expires params)
-                                                  :max-number max-number
-                                                  )) 
+        salt-base (first (str/split salt-full #"\?"))
+        current-time (if (some? expire-time)
+                       (- (parse-int expire-time) (* 1000 (parse-int (:ttl params))))
+                       reference-time)
+        expected-challenge (create-challenge (assoc-if-some {:algorithm algorithm
+                                                             :hmac-key hmac-key
+                                                             :number number
+                                                             :current-time current-time
+                                                             :salt salt-base}
+                                                            :ttl (:ttl params)
+                                                            :expires (:expires params)
+                                                            :max-number max-number))
         base-result (and (= (:challenge expected-challenge) (or (:challenge challenge) challenge))
-             (= (:signature expected-challenge) signature))
+                         (= (:signature expected-challenge) signature))
         not-expired? (if check-expiration? (is-not-past? expire-time reference-time) true)
         result (and base-result not-expired?)]
-  (when (and throw-on-false? (not result))
-    (throw (ex-info "Challenge validation failed. "
-           {:payload payload
-            :params params
-            :not-expired? not-expired?
-            :expected-challenge expected-challenge
-            })
-           )
-    )
-  result
-))
-  
+    (when (and throw-on-false? (not result))
+      (throw (ex-info "Challenge validation failed. "
+                      {:payload payload
+                       :params params
+                       :not-expired? not-expired?
+                       :expected-challenge expected-challenge})))
 
+    result))
 
-(defn check-solution-base64 
+(defn check-solution-base64
   "Verifies a base64 encoded solution. For parameters documenation, see `check-solution`"
   [b64-payload hmac-key check-expiration? & {:keys [max-number reference-time throw-on-false?]}]
   (->
-    b64-payload
-    (encoding/decode-base64)
-    (encoding/json->clj)
-    (check-solution hmac-key check-expiration? 
-                    :max-number max-number
-                    :reference-time reference-time
-                    :throw-on-false? throw-on-false?
-                    )  
-  ))
+   b64-payload
+   (encoding/decode-base64)
+   (encoding/json->clj)
+   (check-solution hmac-key check-expiration?
+                   :max-number max-number
+                   :reference-time reference-time
+                   :throw-on-false? throw-on-false?)))
 
 (defn signature-not-expired? [verification-data current]
   (or (nil? (:expires verification-data))
-                        (> (parse-int (:expires verification-data)) current))
-  )
+      (> (parse-int (:expires verification-data)) current)))
 
 (defn verify-server-signature [{:keys [algorithm verification-data signature verified] :as payload}
                                hmac-key]
-  (let [expected-signature (hmac-hex algorithm 
-                                     (hash-hex algorithm verification-data) 
+  (let [expected-signature (hmac-hex algorithm
+                                     (hash-hex algorithm verification-data)
                                      hmac-key)
         extracted-params (encoding/extract-params verification-data)
-        current-time (now)
-        ]
+        current-time (now)]
     {:verified (and verified
                     (:verified extracted-params)
                     ;; we get :expired key from parsing verification-data
-                    (signature-not-expired? extracted-params current-time) 
+                    (signature-not-expired? extracted-params current-time)
                     (= signature expected-signature))
-     :verification-data (update-in extracted-params [:verified] #(parse-boolean %))
-     }
-    )
-  )
+     :verification-data (update-in extracted-params [:verified] #(parse-boolean %))}))
 
 (defn verify-server-signature-base64 [base64-payload hmac-key]
   (-> base64-payload
       (encoding/decode-base64)
       (encoding/json->clj)
-      (verify-server-signature hmac-key)
-      ) 
-  )
+      (verify-server-signature hmac-key)))
 
-(defn verify-fields-hash 
+(defn verify-fields-hash
   "Verify the hashes of field values in the input map.
   Useful for scraper protection"
   [form-data fields fields-hash algorithm]
   (let [joined-data (str/join "\n" (map #(get form-data % "") fields))
         computed-hash (hash-hex algorithm (str/trim joined-data))]
     (= computed-hash fields-hash)))
-  
+
