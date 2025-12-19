@@ -2,7 +2,7 @@
 
 [![Clojars Project](https://img.shields.io/clojars/v/me.mjholub/altcha-clj.svg)](https://clojars.org/me.mjholub/altcha-clj)
 
-A Clojure/script library designed for working with [Altcha](https://altcha.org) challenges.
+A Clojure library designed for working with [Altcha](https://altcha.org) challenges.
 
 ## Usage
 
@@ -11,7 +11,7 @@ For documentation details, see [Cljdoc](https://cljdoc.org/d/me.mjholub/altcha-c
 
 ### Requirements
 
-ClojureScript version has no special requirements. JVM version requires JDK 18 or higher.
+Requires JDK 17 or higher.
 
 ## License
 

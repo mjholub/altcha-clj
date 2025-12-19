@@ -1,97 +1,60 @@
 (ns altcha-clj.core
-  (:refer-clojure :exclude [empty?])
   (:require
-   #?(:cljs [goog.crypt :as crypt]
-      :clj [pandect.core :refer [sha1-hmac sha256-hmac sha512-hmac
-                                 sha1 sha256 sha512]])
-   [altcha-clj.polyfill :refer [now parse-int]]
+   [pandect.core :refer [sha1-hmac sha256-hmac sha512-hmac
+                         sha1 sha256 sha512]]
+   [altcha-clj.time :refer [now]]
    [clojure.string :as str])
-  #?(:cljs (:import
-            [goog.crypt Hmac Sha256])
+  (:import [javax.crypto Mac]
+           [javax.crypto.spec SecretKeySpec]))
 
-     :clj (:import [javax.crypto Mac]
-                   [javax.crypto.spec SecretKeySpec])))
-
-;; false negative, used in hmac-hex
-#_{:clj-kondo/ignore [:unused-private-var]}
-#?(:clj (defn- hmac-dispatcher
-          "Clojure (JVM) function for selecting the appropriate HMAC signing function
+(defn- hmac-dispatcher
+  "Clojure (JVM) function for selecting the appropriate HMAC signing function
   from the pandect library"
-          [alg-name data hmac-key]
-          (case alg-name
-            "SHA-1" (sha1-hmac data hmac-key)
-            "SHA-256" (sha256-hmac data hmac-key)
-            "SHA-512" (sha512-hmac data hmac-key)
-            (throw (ex-info "Invalid algorithm!" {:got alg-name
-                                                  :want #{"SHA-1" "SHA-256" "SHA-512"}})))))
+  [alg-name data hmac-key]
+  (case alg-name
+    "SHA-1" (sha1-hmac data hmac-key)
+    "SHA-256" (sha256-hmac data hmac-key)
+    "SHA-512" (sha512-hmac data hmac-key)
+    (throw (ex-info "Invalid algorithm!" {:got alg-name
+                                          :want #{"SHA-1" "SHA-256" "SHA-512"}}))))
 
-#?(:clj
-   (defn random-bytes [^Long n]
-     (let [bytes (byte-array n)]
-       (.nextBytes (java.security.SecureRandom.) bytes)
-       bytes))
-   :cljs
-   (defn random-bytes [n]
-     (let [arr (new js/Uint8Array n)]
-       (.getRandomValues js/crypto arr)
-       arr)))
+(defn random-bytes [^Long n]
+  (let [bytes (byte-array n)]
+    (.nextBytes (java.security.SecureRandom.) bytes)
+    bytes))
 
-#?(:clj
-   (defn- ab2hex
-     "Converts a byte array to a hexadecimal string"
-     [byte-array]
-     (apply str (map #(format "%02x" %) byte-array)))
-   :cljs
-   (defn- ab2hex [array-buffer]
-     (crypt/byteArrayToHex array-buffer)))
+(defn- ab2hex
+  "Converts a byte array to a hexadecimal string"
+  [byte-array]
+  (apply str (map #(format "%02x" %) byte-array)))
 
-#?(:clj
-   (defn random-int [^Long max]
-     (.nextInt (java.security.SecureRandom.) max))
-   :cljs
-   (defn random-int [max]
-     (js/Math.floor (* (js/Math.random) max))))
+(defn random-int [^Long max]
+  (.nextInt (java.security.SecureRandom.) max))
 
-#?(:clj
-   (defn hash-hex
-     "Generates a hexadecimal string representation of the challenge
+(defn hash-hex
+  "Generates a hexadecimal string representation of the challenge
      message digest created using the selected algorithm"
-     [^String algorithm data]
-     (case algorithm
-       "SHA-1" (sha1 data)
-       "SHA-256" (sha256 data)
-       "SHA-512" (sha512 data)))
-   :cljs
-   (defn hash-hex
-     "Generates a hexadecimal string representation of the SHA-256 digest of the challenge message"
-     [_ data]
-     (let [sha256 (Sha256.)
-           data-bytes (crypt/stringToUtf8ByteArray data)]
-       (.update sha256 data-bytes)
-       (ab2hex (.digest sha256)))))
+  [^String algorithm data]
+  (case algorithm
+    "SHA-1" (sha1 data)
+    "SHA-256" (sha256 data)
+    "SHA-512" (sha512 data)))
 
-#?(:clj (defn- secret-key-inst [key mac]
-          (SecretKeySpec. (.getBytes key "UTF-8") (.getAlgorithm mac))))
+(defn- secret-key-inst [key mac]
+  (SecretKeySpec. (.getBytes key "UTF-8") (.getAlgorithm mac)))
 
-#?(:clj
-   (defn hmac-hex
-     "Returns the HMAC-encoded value of the data. Params
+(defn hmac-hex
+  "Returns the HMAC-encoded value of the data. Params
     - `algorithm` - 'SHA-256', 'SHA-512' or 'SHA-1'
     - `data` – the data to be hashed
-    - `key` – the private HMAC key
-    "
-     [algorithm data key]
-     (hmac-dispatcher algorithm data key))
-   :cljs
-   (defn hmac-hex [algorithm data key]
-     (let [hmac (Hmac. (Sha256.) (crypt/stringToUtf8ByteArray key))
-           data-bytes (crypt/stringToUtf8ByteArray data)]
-       (ab2hex (.getHmac hmac data-bytes)))))
+    - `key` – the private HMAC key"
+  [algorithm data key]
+  (hmac-dispatcher algorithm data key))
 
 (defn calculate-expiration-offset
   "Adds `offset-secs` * 1000 to the `start-ts-ms` timestamp value"
   [start-ts-ms offset-secs]
-  (+ (* 1000 (parse-int offset-secs)) start-ts-ms))
+  (+ (* 1000 (parse-long offset-secs)) start-ts-ms))
 
 (defn create-challenge
   "Creates a challenge for the client to solve.
@@ -154,8 +117,3 @@
      :maxnumber max-number
      :salt s
      :signature signature}))
-
-#?(:cljs
-   (defn ^:export createChallenge [options]
-     (let [clj-options (js->clj options :keywordize-keys true)]
-       (clj->js (create-challenge clj-options)))))
