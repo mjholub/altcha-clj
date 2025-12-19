@@ -24,13 +24,15 @@
 
 (t/deftest extract-params-test
   (t/testing "Extracting parameters from a URL"
-    (t/is (= {:key1 "value1" :key2 "value2"} (e/extract-params "key1=value1&key2=value2")))
-    (t/is (= {:key1 "value with spaces"} (e/extract-params (e/decode-url-component "key1=value%20with%20spaces"))))
-    (t/is (= {:key1 "!@#$%^*()"} (e/extract-params
-                                  (e/decode-url-component "key1=%21%40%23%24%25%5E%2A%28%29"))))
-    (t/is (= {:key1 "42"} (e/extract-params "key1=42"))))
-  (t/testing "Handling null values"
-    (t/is (= {:k0 nil :k1 nil :k2 nil} (e/extract-params "k0=&k1=null&k2=nil")))))
+    (t/is (= {:salt "y" :key1 "value1" :key2 "value2"} (e/extract-params "y?key1=value1&key2=value2")))
+    (t/is (= {:salt "xyz;" :key1 "value with spaces"} (e/extract-params (e/decode-url-component "xyz;?key1=value%20with%20spaces"))))
+    (t/is (= {:salt "abc;" :key1 "!@#$%^*()"} (e/extract-params
+                                               (e/decode-url-component "abc;?key1=%21%40%23%24%25%5E%2A%28%29"))))
+    (t/is (= {:salt "xyz;" :key1 "42"} (e/extract-params "xyz;?key1=42"))))
+  (t/testing "Handling null values: keys w/o val dropped"
+    (t/is (= {:salt "x" :k1 nil :k2 nil} (e/extract-params "x?k0=&k1=null&k2=nil"))))
+  (t/testing "no salt"
+    (t/is (= {:salt "k0=&k1=foo&k2=bar"} (e/extract-params "k0=&k1=foo&k2=bar")))))
 
 (t/deftest decode-base64-test
   (t/testing "Decoding base64 strings"

@@ -6,7 +6,6 @@
                                      decode-url-component-test
                                      extract-params-test json->clj-test
                                      test-encode-params]]
-   [altcha-clj.time :refer [now]]
    [clojure.string :as str]))
 
 (defn mock-random-bytes [n]
@@ -43,12 +42,12 @@
 
     (t/testing "Custom salt"
       (let [challenge (altcha/create-challenge {:hmac-key "test-key" :salt "custom-salt"})]
-        (t/is (= "custom-salt" (:salt challenge)))))
+        (t/is (= "custom-salt;" (first (str/split (:salt challenge) #"\?"))))))
 
     (t/testing "Expires parameter"
-      (let [ttl 60
-            current-ts (now)
-            lowest-correct-expire-ts (+ (* 1000) current-ts)
+      (let [ttl 60 ;; seconds
+            current-ts (System/currentTimeMillis)
+            lowest-correct-expire-ts (+ 1 current-ts)
             challenge (altcha/create-challenge {:hmac-key "test-key" :ttl ttl})]
         (t/is (<= lowest-correct-expire-ts
                   (parse-long (last (re-find #"expires=(\d+)" (:salt challenge))))))))

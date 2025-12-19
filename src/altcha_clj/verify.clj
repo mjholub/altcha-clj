@@ -2,7 +2,6 @@
   (:require
    [altcha-clj.core :refer [create-challenge hash-hex hmac-hex]]
    [altcha-clj.encoding :as enc]
-   [altcha-clj.time :refer [now]]
    [clojure.string :as str]))
 
 (defn- past?
@@ -50,31 +49,24 @@
   - `reference-time` - reference timestamp to compare as the timestamp 
   which must be greater than the challenge's `created-at` value
   - `throw-on-false?` - whether to throw an error if the result is false.
-  The result will be an ex-message with `params`, `payload`, `not-expired?` and `expected-challenge`
-  "
-  [payload hmac-key ^Boolean check-expiration? & {:keys [max-number reference-time throw-on-false?]}]
+  The result will be an ex-message with `params`, `payload`, `not-expired?` and `expected-challenge`"
+  [payload hmac-key ^Boolean check-expiration? & {:keys [max-number reference-time throw-on-false?]
+                                                  :or {reference-time (System/currentTimeMillis)}}]
   (let [{:keys [algorithm challenge number salt signature]} payload
-        salt-full (get challenge :salt salt)
-        params (enc/extract-params
-                (enc/decode-url-component salt-full))
-        expire-time (:expires params)
-      ;; remove parameters from salt
-        salt-base (first (str/split salt-full #"\?"))
-        current-time (if expire-time
-                       (- (parse-long expire-time) (* 1000 (parse-long (:ttl params))))
-                       reference-time)
-        expected-challenge (create-challenge (assoc-if-some {:algorithm algorithm
-                                                             :hmac-key hmac-key
-                                                             :number number
-                                                             :current-time current-time
-                                                             :salt salt-base}
-                                                            :ttl (:ttl params)
-                                                            :expires expire-time
-                                                            :max-number max-number))
-        base-result (and (= (:challenge expected-challenge) (or (:challenge challenge) challenge))
-                         (= (:signature expected-challenge) signature))
+        {:keys [salt expires expire ttl] :as params} (enc/extract-params
+                                                      (enc/decode-url-component (:salt challenge salt)))
+        expected (create-challenge (assoc-if-some {:algorithm algorithm
+                                                   :hmac-key hmac-key
+                                                   :number number
+                                                   :current-time reference-time
+                                                   :salt salt}
+                                                  :ttl ttl
+                                                  :expires expires
+                                                  :max-number max-number))
+        base-result (and (= (:challenge expected) challenge)
+                         (= (:signature expected) signature))
         ;; truth table: if checks disabled will return true regardless of result. nil if [true true]
-        not-expired? (some not [check-expiration? (past? expire-time reference-time)])
+        not-expired? (some not [check-expiration? (past? (or expires expire) reference-time)])
         result (and base-result not-expired?)]
     (when (and throw-on-false? (not result))
       (throw (ex-info "Challenge validation failed. "
@@ -82,21 +74,22 @@
                        :params params
                        :not-expired? not-expired?
                        :reference-time reference-time
-                       :expiration-time expire-time
-                       :expected-challenge expected-challenge})))
+                       :expiration-time expires
+                       :expected-challenge expected})))
     result))
 
 (defn check-solution-base64
-  "Verifies a base64 encoded solution. For parameters documenation, see `check-solution`"
-  [b64-payload hmac-key ^Boolean check-expiration? & {:keys [max-number reference-time throw-on-false?]}]
+  "Verifies a base64 encoded solution. For parameters documenation, see `check-solution`
+  NOTE: must pass number in the tail args map in testing"
+  [b64-payload hmac-key ^Boolean check-expiration? & {:keys [max-number reference-time throw-on-false? number]}]
   (->
    b64-payload
    (enc/decode-base64)
    (enc/json->clj)
+   (assoc-if-some :number number)
    (check-solution hmac-key check-expiration?
-                   :max-number max-number
-                   :reference-time reference-time
-                   :throw-on-false? throw-on-false?)))
+                   (assoc-if-some {}
+                                  :max-number max-number :reference-time reference-time :throw-on-false? throw-on-false?))))
 
 (defn signature-not-expired? [verification-data current]
   (or (nil? (:expires verification-data))
@@ -107,14 +100,16 @@
   (let [expected-signature (hmac-hex algorithm
                                      (hash-hex algorithm verification-data)
                                      hmac-key)
-        extracted-params (enc/extract-params verification-data)
-        current-time (now)]
+        extracted-params (enc/extract-params (str "x?" (enc/decode-url-component verification-data)))
+        current-time (System/currentTimeMillis)]
     {:verified (and verified
                     (:verified extracted-params)
                     ;; we get :expired key from parsing verification-data
                     (signature-not-expired? extracted-params current-time)
                     (= signature expected-signature))
-     :verification-data (update-in extracted-params [:verified] #(parse-boolean %))}))
+     :verification-data (update-in extracted-params [:verified] #(if (string? %)
+                                                                   (true? (parse-boolean %))
+                                                                   (true? %)))}))
 
 (defn verify-server-signature-base64 [base64-payload hmac-key]
   (-> base64-payload

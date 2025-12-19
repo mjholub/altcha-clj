@@ -23,21 +23,25 @@
   (i.e. numbers, strings, nil/null or keywords. Collections are not supported yet)  
   Special characters must be first decoded by `decode-url-component`"
   [salt]
-  (into {}
-        (map
-         (fn [[k v]]
-           (let [parsed-v (cond
-                            (or (= "null" v) (= "nil" v) (= "" v) (nil? v))
-                            nil
-                            (str/starts-with? v "%3A")
-                            (keyword (last (str/split v #"%3A" 2)))
-                            :else v)
-                 v-spaces (if (some? parsed-v)
-                            (str/replace parsed-v #"(%20|\+)" " ")
-                            parsed-v)]
-
-             [(keyword k) v-spaces]))
-         (map #(str/split % #"=") (str/split salt #"(\&|\?)")))))
+  (let [salt-base (str/split salt #"\?")]
+    (if (= 1 (count salt-base))
+      {:salt (first salt-base)} ;; if no params are present, return a map of {:salt salt}
+      (let [salt-params (second salt-base)] ;; else combine the remaining keys with the salt
+        (into {:salt (first salt-base)}
+              (map
+               (fn [[k v]]
+                 (let [parsed-v (cond
+                                  (or (= "null" v) (= "nil" v) (= "" v) (nil? v))
+                                  nil
+                                  (str/starts-with? v "%3A")
+                                  (keyword (last (str/split v #"%3A" 2)))
+                                  :else v)
+                       v-spaces (if (some? parsed-v)
+                                  (str/replace parsed-v #"(%20|\+)" " ")
+                                  parsed-v)]
+                   [(keyword k) v-spaces]))
+               (filter #(even? (count %))
+                       (map #(str/split % #"=") (str/split salt-params #"\&")))))))))
 
 (defn decode-base64
   "Cross platform helper function for decoding base64"

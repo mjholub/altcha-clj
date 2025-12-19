@@ -3,8 +3,8 @@
    [clojure.test :as t]
    [altcha-clj.core :refer [create-challenge hash-hex hmac-hex]]
    [altcha-clj.encoding :refer [clj->json encode-base64 encode-params]]
-   [altcha-clj.polyfill :refer [now]]
-   [altcha-clj.verify :as v]))
+   [altcha-clj.verify :as v]
+   [altcha-clj.encoding :as enc]))
 
 (def mock-hmac-key "test key")
 
@@ -16,7 +16,7 @@
 (t/deftest verify-server-signature-test
   (t/testing "Returns a positive verification result
     for good input data that is encoded as a clj map"
-    (let [test-time (now)
+    (let [test-time (System/currentTimeMillis)
           expire (str (+ 15000 test-time))
           verification-data (encode-params {:email "čžýěžě@sfffd.net"
                                             :expires expire
@@ -36,46 +36,57 @@
 
 (defn- create-b64-payload [challenge]
   (-> (assoc payload-common
-             :challenge challenge
+             :challenge (:challenge challenge)
              :signature (:signature challenge))
       (clj->json)
       (encode-base64)))
 
 (t/deftest test-check-solution-base64
   (t/testing "Verifies a base64 encoded solution with good values"
-    (let [challenge (create-challenge (assoc payload-common
-                                             :hmac-key mock-hmac-key))
-          payload-base64 (create-b64-payload challenge)]
-      (t/is (true? (v/check-solution-base64 payload-base64 mock-hmac-key false)))))
+    (let [challenge (enc/encode-base64 (enc/clj->json (create-challenge (assoc payload-common
+                                                                               :hmac-key mock-hmac-key))))]
+      (t/is (true? (v/check-solution-base64 challenge mock-hmac-key false {:number 420})))))
   (t/testing "Challenge created with max-number parameter set"
-    (let [challenge (create-challenge (assoc payload-common
-                                             :max-number 9000
-                                             :hmac-key mock-hmac-key))
-          payload-base64 (create-b64-payload challenge)]
-      (t/is (true? (v/check-solution-base64 payload-base64 mock-hmac-key false 9000)))))
+    (let [challenge (enc/encode-base64 (enc/clj->json (create-challenge (assoc payload-common
+                                                                               :max-number 9000
+                                                                               :hmac-key mock-hmac-key))))]
+      (t/is (true? (v/check-solution-base64 challenge mock-hmac-key false {:number 420})))))
 
   (t/testing "With expiration"
     (let [;; set expiration time to 90s
-          current-time (now)
-          challenge (create-challenge (assoc payload-common :hmac-key mock-hmac-key
-                                             :current-time current-time
-                                             :ttl 90))
-          payload-base64 (create-b64-payload challenge)]
-      (println "challenge: " (pr-str challenge))
-      (t/is (true? (v/check-solution-base64 payload-base64 mock-hmac-key true
-                                            :reference-time current-time)))))
+          current-time (System/currentTimeMillis)
+          challenge (enc/encode-base64 (enc/clj->json (create-challenge (assoc payload-common :hmac-key mock-hmac-key
+                                                                               :current-time current-time
+                                                                               :expires (+ current-time 90000)))))]
+      (t/is (true? (v/check-solution-base64 challenge mock-hmac-key true
+                                            {:reference-time current-time
+                                             :number 420})))))
 
-  (t/testing "(REGRESSION/inegration): trimming params from salt/real world response"
-    (let [challenge-base64 "eyJhbGdvcml0aG0iOiJTSEEtMjU2IiwiY2hhbGxlbmdlIjoiNjlhZGVlY2MwYTJkMzRiNmRmOTc0ODUxMDVmNDQ2ODIwOTI2NGNkYmI4ZmUzMmVlNzU0ZGQ0MzMwYmQyNDAxZiIsIm51bWJlciI6NDgzMDcsInNhbHQiOiJjYjhkZGRmZmQ0MzlkNzU5YTQxMzA5ZmFjOGU2NGUzOWU0ZTVjNjYyYTM4NzFlNWU4MTNkZmQ3ZDEyZmM1YTIzZDUwZGJhM2M2OWNmNTU5NTg3ODgzMzY5N2RlYTEyYzgzZjM2MzI5ZjYxYjlkZDM0ZWI2YzYwZjZmYWIyYzhiMz9leHBpcmVzPTE3MjUzOTA1MDAmdHRsPTkwIiwic2lnbmF0dXJlIjoiNzU4MTA4YmQ4ZjhlN2ZjZDlmNWM3ZjNkYmM1MmI5YWVlMWI2NTcxMzRiZDNhMTczMGVmNzE2OTFjNTg5ODE4YyIsInRvb2siOjEyMTZ9"
-          hmac-key "testkey"
-          fallback-hmac (str (random-uuid))
-          max-number 100000
-          reference-time (now)
+  (t/testing "(REGRESSION/integration): trimming params from salt/real world response"
+    (let [reference-time 1766152599314
+          challenge-base64 (enc/encode-base64 (enc/clj->json (create-challenge {:algorithm "SHA-256"
+                                                                                :hmac-key "testkey"
+                                                                                :number 1234
+                                                                                :expires 1766152609314
+                                                                                :current-time reference-time})))
           result (v/check-solution-base64 challenge-base64
-                                          (or hmac-key fallback-hmac)
+                                          "testkey"
                                           true
-                                          :max-number max-number
-                                          :reference-time reference-time
-                                          :throw-on-false? false)]
+                                          {:number 1234
+                                           :reference-time reference-time
+                                           :throw-on-false? false})]
 
       (t/is (true? result)))))
+
+(t/deftest test-check-solution
+  (t/testing "should not verify manipulated (spliced) salt with expires parameter"
+    (let [ch (create-challenge {:hmac-key "testkey"
+                                :number 123
+                                :expires (+ 600 (System/currentTimeMillis))})]
+      (t/is false? (v/check-solution {:algorithm (:algorithm ch)
+                                      :challenge (:challenge ch)
+                                      :number 23
+                                      :salt (str (:salt ch) "1")
+                                      :signature (:signature ch)}
+                                     "testkey"
+                                     true)))))
